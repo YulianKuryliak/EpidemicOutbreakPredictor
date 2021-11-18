@@ -2,8 +2,8 @@ import igraph
 #import numba
 #from numba import cuda
 #from numba import jit
-import Network_model
-import Population 
+from scripts import Network_model
+from scripts import Population 
 import time
 import numpy as np
 import math
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from pprint import pprint
 import os
 from os import path
-import Network
+from scripts import Network
 from memory_profiler import profile
 import tracemalloc
 
@@ -55,7 +55,6 @@ def infication_roulette_wheel_choise(network, contagious_contacts, contagious_co
 
 
 def get_time_to_infication(contagious_contacts_concentration, infection_rate):
-    #check with R rexp(1,qii)
     if(contagious_contacts_concentration <= 0):
         return math.inf
     return round(np.random.exponential(1/(contagious_contacts_concentration * infection_rate)),12) # expected value - contagious_contacts_concentration.
@@ -68,8 +67,10 @@ def infication(index_node_for_infication, infication_time, network, death_note):
     network.susceptible_nodes[index_node_for_infication][0] = 0
     network.contagious_nodes[index_node_for_infication] = 1
     network.times_node_infication[index_node_for_infication] = infication_time
-    if(np.random.uniform(0.0, 1.0) <= network.death_probabilities[i]):
+    network.colors[index_node_for_infication] = "#00FF00"
+    if(np.random.uniform(0.0, 1.0) <= network.death_probabilities[index_node_for_infication] + 0.2):
         death_note[index_node_for_infication] = 1 #die with probability
+        network.colors[index_node_for_infication] = "#FF0000"
 
 
 def CTMC(network, death_note, treatment_time, critically_treatment_time, infection_rate = 0.01, time = 0):
@@ -98,14 +99,19 @@ def get_time_to_action(current_time, time_to_next_infication, time_step):
 
 def do_actions(time, network, death_note, treatment_time, critically_treatment_time):
     for i in range(len(network.infected_nodes)):
+        # death
         if(network.infected_nodes[i] == 1 and death_note[i] == 1 and time >= network.times_node_infication[i]+critically_treatment_time):
             network.infected_nodes[i] = 0
             network.susceptible_nodes[i][0] = 0
             network.contagious_nodes[i] = 0
+            network.colors[i] = "#9400D3"
+
+        # treatment
         if(network.infected_nodes[i] == 1 and death_note[i] == 0 and time >= network.times_node_infication[i]+treatment_time):
             network.infected_nodes[i] = 0
             network.susceptible_nodes[i][0] = 0
             network.contagious_nodes[i] = 0
+            network.colors[i] = "#ADD8E6"
     #print("infected_nodes: ", infected_nodes)
     #print(treatment_time)
 
@@ -124,13 +130,23 @@ def provide_quorantine_measures(network, current_time, quorantine_measures):
         if(current_time == measure['time']):
             network.do_random_quarantine(measure)
 
+
+def get_folder_name(graph_size, network_type, amount_of_contacts, infection_rate):
+    return "size: {}, network: {}, node_contacts: {}, infection_rate: {}/".format(
+                    graph_size, network_type, amount_of_contacts, infection_rate)
+
 #@profile
-def simulation(graph_size, network_type, amount_of_contacts, infection_rate, number_of_infications, max_time, time_step, i, path, quorantine_measures):
+def simulation(graph_size, network_type, amount_of_contacts, infection_rate, number_of_infications, max_time, time_step, i, folder, quorantine_measures = ""):
+    folder = folder + get_folder_name(graph_size, network_type, amount_of_contacts, infection_rate)
+    if(path.exists(folder) == False):
+        os.makedirs(folder)
+        print("Created!")
     print(network_type)
     death_note = [0 for i in range(graph_size)]
     treatment_time = 10
     critically_treatment_time = 14
     current_time = 0
+    network_states = []
 
     all_time = time.time()
     print("Network was createed")
@@ -147,7 +163,7 @@ def simulation(graph_size, network_type, amount_of_contacts, infection_rate, num
 
     states_info = [["time", "amount_of_infected", "amount_of_susceptible", "amount_of_contagious", "amount_of_critically_infected", "amount_of_dead"]]
     
-    #print("current_time: ", current_time)
+    print("current_time: ", current_time)
 
     while(current_time < max_time):
         current_time, time_to_next_infication = get_time_to_action(current_time, time_to_next_infication, time_step)
@@ -160,58 +176,63 @@ def simulation(graph_size, network_type, amount_of_contacts, infection_rate, num
             do_actions(current_time, network, death_note, treatment_time, critically_treatment_time)
             states_info.append([current_time] + list(get_states_info(network, death_note)))
             #provide_quorantine_measures(network, current_time, quorantine_measures)
-            #graph = igraph.Graph.Adjacency(network.adjacency_matrix, mode = "undirected")
+            graph = igraph.Graph.Adjacency(network.adjacency_matrix, mode = "undirected")
+            graph.vs['color'] = network.colors
+            network_states.append(graph)
             #igraph.plot(graph, " /run/media/fedora_user/31614d99-e16f-45e1-8be5-e21723cf8199/projects/ManagingEpidemicOutbreak/Python-v.0.1/test.png")
+    network_states.append(graph)
+    print("all time: ", time.time() - all_time)
 
     #print(network.infected_by_nodes)
-    with open(path+'R.txt','a+') as file:
+    with open(folder+'R.txt','a+') as file:
         file.write(str(np.average(network.infected_by_nodes))+";"+str(np.median(network.infected_by_nodes))+";")
 
-    print("all time: ", time.time() - all_time)
-    with open(path + str(i) + '.txt', 'w') as file:
+    with open(folder + str(i) + '.txt', 'w') as file:
         for row in states_info:
             file.write(','.join([str(a) for a in row]) + '\n')
 
-graph_size = (10 ** 3) * 1
-network_type = 'WS' #'Barabasi', 'Complete'
-amount_of_contacts_set = [10]#,2,4,10]
-if network_type == 'Complete':
-    amount_of_contacts_set = [0]
-infection_rate_set = [0.02, 0.018, 0.016, 0.015, 0.012, 0.01, 0.005]#, 0.05, 0.1, 0.5]
-number_of_infications = 1
-max_time = 100
-time_step = 1
-amount_of_simulations = 100
-amount_of_nodes_for_imunization_set = [int(graph_size * fraction) for fraction in [0.01]]#, 0.05, 0.1, 0.2]]
+    return network_states, states_info
+
+# graph_size = (10 ** 3) * 1
+# network_type = 'WS' #'Barabasi', 'Complete'
+# amount_of_contacts_set = [10]#,2,4,10]
+# if network_type == 'Complete':
+#     amount_of_contacts_set = [0]
+# infection_rate_set = [0.02, 0.018, 0.016, 0.015, 0.012, 0.01, 0.005]#, 0.05, 0.1, 0.5]
+# number_of_infications = 1
+# max_time = 100
+# time_step = 1
+# amount_of_simulations = 100
+# amount_of_nodes_for_imunization_set = [int(graph_size * fraction) for fraction in [0.01]]#, 0.05, 0.1, 0.2]]
 
 
-#0.63 * infection_rate
-#R (!!!infection_rate!!!, contagious, suceptibility, network(number of contacts))
+# #0.63 * infection_rate
+# #R (!!!infection_rate!!!, contagious, suceptibility, network(number of contacts))
 
-#quorantine_measures = [{'method':'masks', 'influence_susceptibility':0.1, 'influence_contagiousness':0.3, 'amount': graph_size*0.75, 'time':0}]
-#quorantine_measures = [{'method':'no', 'influence_susceptibility':0.1, 'influence_contagiousness':0.3, 'amount': graph_size*0.75, 'time':-1}]
-times = []
-am = 1
-for i in range(am):
-    start = time.time()
-    folder_path = "/home/data/projects/ManagingEpidemicOutbreak/Python-v.0.1/simulations/"
-    for amount_of_nodes_for_imunization in amount_of_nodes_for_imunization_set:
-        #quorantine_measures = [{'method':'betweenness_imunization', 'amount': amount_of_nodes_for_imunization}]
-        quorantine_measures = [{'method':'no', 'amount': amount_of_nodes_for_imunization}]
-        for amount_of_contacts in amount_of_contacts_set:
-            for infection_rate in infection_rate_set:
-                folder_name = "size: {}, network: {}, node_contacts: {}, infection_rate: {}, quarantine_measure: {}_{}/".format(
-                    graph_size, network_type, amount_of_contacts, infection_rate, quorantine_measures[0]['method'], quorantine_measures[0]['amount'])
+# #quorantine_measures = [{'method':'masks', 'influence_susceptibility':0.1, 'influence_contagiousness':0.3, 'amount': graph_size*0.75, 'time':0}]
+# #quorantine_measures = [{'method':'no', 'influence_susceptibility':0.1, 'influence_contagiousness':0.3, 'amount': graph_size*0.75, 'time':-1}]
+# times = []
+# am = 1
+# for i in range(am):
+#     start = time.time()
+#     folder_path = "/home/data/projects/ManagingEpidemicOutbreak/Python-v.0.1/simulations/"
+#     for amount_of_nodes_for_imunization in amount_of_nodes_for_imunization_set:
+#         #quorantine_measures = [{'method':'betweenness_imunization', 'amount': amount_of_nodes_for_imunization}]
+#         quorantine_measures = [{'method':'no', 'amount': amount_of_nodes_for_imunization}]
+#         for amount_of_contacts in amount_of_contacts_set:
+#             for infection_rate in infection_rate_set:
+#                 folder_name = "size: {}, network: {}, node_contacts: {}, infection_rate: {}/".format(
+#                     graph_size, network_type, amount_of_contacts, infection_rate)
 
-                data_path = folder_path + folder_name
-                if(path.exists(data_path) == False):
-                    os.makedirs(data_path)
-                    print("Created!")
-                if(os.path.exists(data_path+"R.txt")):
-                    os.remove(data_path+"R.txt")
+#                 data_path = folder_path + folder_name
+#                 if(path.exists(data_path) == False):
+#                     os.makedirs(data_path)
+#                     print("Created!")
+#                 if(os.path.exists(data_path+"R.txt")):
+#                     os.remove(data_path+"R.txt")
                 
-                for i in range(0, amount_of_simulations):
-                    file_name = ""
-                    simulation(graph_size, network_type, amount_of_contacts, infection_rate, number_of_infications, max_time, time_step, i, data_path, quorantine_measures)
-    times.append(time.time() - start)
-print(sum(times)/am)
+#                 for i in range(0, amount_of_simulations):
+#                     file_name = ""
+#                     simulation(graph_size, network_type, amount_of_contacts, infection_rate, number_of_infications, max_time, time_step, i, data_path, quorantine_measures)
+#     times.append(time.time() - start)
+# print(sum(times)/am)

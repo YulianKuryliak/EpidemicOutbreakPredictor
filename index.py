@@ -1,5 +1,5 @@
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
@@ -13,6 +13,7 @@ from app import server
 from tabs import simulation_tab#, analysis_tab, home_tab
 path_to_R = "C:\\Program Files\\R\\R-4.0.3\\bin\\Rscript.exe"
 simulation_tab.path_to_R = path_to_R
+
 
 
 app.layout = html.Div([

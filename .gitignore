@@ -1,4 +1,4 @@
-simulations/*
+assets/simulations/*
 *test*
-__pycache__
-*copy.*
+*__pycache__*
+*copy*

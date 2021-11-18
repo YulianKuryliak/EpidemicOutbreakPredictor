@@ -22,6 +22,7 @@ class Network:
         self.contagiousness_of_nodes = np.array([1 for i in range(self.size)])
         self.susceptibility_of_nodes = np.array([[1] for i in range(self.size)])
         self.infected_by_nodes = np.array([0 for i in range(self.size)])
+        self.colors = ["#ffffff" for _ in range(self.size)]
 
 
 # canon [{???'method': , 'influence_susceptibility': , 'influence_contagiousness': , 'amount': }, ...]
