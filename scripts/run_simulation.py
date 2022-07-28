@@ -30,10 +30,6 @@ from scripts import Network_model
 #     "Criticaly_infection_rate": "different",
 # }
 
-#def start_simulation(amount, size, start_infected, infection_rate, time_step, time_max, 
-# network_type, folder, virus_types, death_rate_type, amount_of_edges, 
-# prob_reconnection, number_of_threads = 2):
-
 PATH = str(pathlib.Path(__file__).parent.absolute()).replace('scripts', '')
 
 
@@ -61,7 +57,7 @@ def run(inputed_parameters):
 			max_time = int(parameters['Maximum_simulation_time']), 
 			time_step = round(float(parameters['Time_of_data_collection']),2), 
 			i = int(i), 
-			folder = PATH + "/assets/simulations/"
+			folder = PATH + "/data/simulations/"
 		)
 	return last
 # def simulation(graph, graph_size, network_type, 

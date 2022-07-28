@@ -9,7 +9,7 @@ from app import app
 from app import server
 
 
-from scripts import test
+from scripts import file1
 
 
 # Connect to your app pages
@@ -37,8 +37,8 @@ app.layout = html.Div([
 def display_page(pathname):
     if pathname == '/tabs/simulation':
         return simulation_tab.layout
-    if pathname == '/tabs/analysis':
-        return analysis_tab.layout
+    # if pathname == '/tabs/analysis':
+    #     return analysis_tab.layout
     else:
         return "404 Page Error! Please choose a link"
 

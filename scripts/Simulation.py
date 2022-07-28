@@ -217,7 +217,8 @@ def simulation(graph, graph_size, network_type, amount_of_contacts, infection_ra
     network_states.append(copy.deepcopy(network.graph))
     print("all time: ", time.time() - all_time)
 
-    #print(network.infected_by_nodes)
+    # print(network.infected_by_nodes)
+
     with open(folder+'R.txt','a+') as file:
         file.write(str(np.average(network.infected_by_nodes))+";"+str(np.median(network.infected_by_nodes))+";")
 
