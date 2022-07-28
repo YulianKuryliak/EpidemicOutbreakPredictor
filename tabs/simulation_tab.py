@@ -15,10 +15,11 @@ import plotly.graph_objects as go
 from plotly.graph_objects import *
 import igraph
 from dash.exceptions import PreventUpdate
-
+from scripts import Network_model, run_simulation
+import numpy as np
 
 from app import app
-from scripts import run_simulation
+from scripts import Simulation
 
 # get relative data folder
 path_to_R = ""
@@ -59,14 +60,14 @@ other_parameters = [
 ]
 total_fields = []
 inputed_parameters = {
-    "epidemiological_model": "",
+    "epidemiological_model": "SIR",
     "network_model": "BA",
-    "Size": 100,
-    "Infection_rate": 0.003,
+    "Size": 500,
+    "Infection_rate": 0.5,
     "Maximum_simulation_time": 100,
     "Time_of_data_collection": 1,
     "start_infected": 1,
-    "number_of_edges": 0,
+    "number_of_edges": 2,
     "reconection_coefitient": 0,
     "Treatment_Period": 10,
     "Critically_Treatment_Period": 14,
@@ -79,16 +80,6 @@ s_time = -1
 layout = html.Div(
     [
         html.H1("Welcome to simulation", style={"textAlign": "center"}),
-        # html.Div(children="Chose epidemiological model"),
-        # dbc.DropdownMenu(
-        #     id="dropdown_epidemiological_model",
-        #     label=chosen_epidemiological_model,
-        #     children=[
-        #         dbc.DropdownMenuItem(
-        #             id = "dropdown_item_epidemiological_model_{}".format(epidemiological_model),
-        #             epidemiological_model) for epidemiological_model in epidemiological_models
-        #     ],
-        # ),
         dbc.Table(
             html.Tbody(
                 [
@@ -155,56 +146,52 @@ layout = html.Div(
                 html.Div(
                     id="simulation_output",
                     children=[
-                        dcc.Interval(id="interval1", interval=1 * 1000, n_intervals=0),
+                        dcc.Interval(id="interval1", interval=1 * 1000, n_intervals=0, max_intervals = 100, disabled=True),
                         html.H1(
                             id="test_clock",
-                            children=["123"],
+                            children=["no data"],
                             style={"textAlign": "center"},
                         ),
-                        # html.Img(id = "image1", src='data:image/png;base64,{}'.format(encoded_image))
-                        html.Img(
-                            id="image1",
-                            src=app.get_asset_url("0.png"),
-                            style={
-                                "height": "700px",
-                                "width": "700px",
-                                "textAlign": "center",
-                            },
-                        ),
-
-                        dcc.Graph(
-                            id="graph_visualization",
-                            figure=go.Figure(data=None, layout = go.Layout(
-                                font= dict(size=12),
-                                showlegend=False,
-                                autosize=False,
-                                width=800,
-                                height=800,
-                                xaxis=go.layout.XAxis(),
-                                yaxis=go.layout.YAxis(),
-                                # margin=go.layout.Margin(
-                                #     l=40,
-                                #     r=40,
-                                #     b=85,
-                                #     t=100,
-                                # ),
-                                #align='center',
-                                hovermode='closest',
-                                annotations=[
-                                    dict(
-                                    showarrow=False,
-                                        xref='paper',
-                                        yref='paper',
-                                        x=0,
-                                        y=-0.1,
-                                        xanchor='left',
-                                        yanchor='bottom',
-                                        font=dict(
-                                        size=14
+                        html.Div([
+                            dcc.Graph(
+                                id="graph_visualization",
+                                figure=go.Figure(data=None, layout = go.Layout(
+                                    font= dict(size=12),
+                                    showlegend=False,
+                                    autosize=False,
+                                    width=800,
+                                    height=800,
+                                    xaxis=go.layout.XAxis(),
+                                    yaxis=go.layout.YAxis(),
+                                    # margin=go.layout.Margin(
+                                    #     l=40,
+                                    #     r=40,
+                                    #     b=85,
+                                    #     t=100,
+                                    # ),
+                                    #align='center',
+                                    hovermode='closest',
+                                    annotations=[
+                                        dict(
+                                        showarrow=False,
+                                            xref='paper',
+                                            yref='paper',
+                                            x=0,
+                                            y=-0.1,
+                                            xanchor='left',
+                                            yanchor='bottom',
+                                            font=dict(
+                                            size=14
+                                            )
                                         )
-                                    )
-                                ]
-                            )),
+                                    ]
+                                )),
+                            )
+                            ],
+                            style={
+                                "width": "100%",
+                                "height": "100%",
+                            },
                         ),
 
                         # style={'height':'50%', 'width':'50%'}
@@ -213,9 +200,9 @@ layout = html.Div(
                                 dcc.Slider(
                                     id="my-slider",
                                     min=0,
-                                    max=100,
-                                    step=1,
-                                    value=17,
+                                    max=inputed_parameters["Maximum_simulation_time"],
+                                    step=inputed_parameters["Time_of_data_collection"],
+                                    value=0,
                                 )
                             ],
                             style={
@@ -353,18 +340,20 @@ def set_network_model(chosen_value):
 
 
 @app.callback(
-    Output("our_graph", "figure"), 
+    Output("our_graph", "figure"),
+    Output("interval1", "disabled"),
+    #Output("interval1", "max_intervals"),
     Input("button_submit_parameters", "n_clicks"),
-    State("dropdown_epidemiological_model", "value"),
-    State("dropdown_network_model", "value"),
-    [
-        State(
-            component_id={"type": "input_parameters", "index": ALL},
-            component_property="value",
-        )
-    ],
+    # State("dropdown_epidemiological_model", "value"),
+    # State("dropdown_network_model", "value"),
+    # [
+    #     State(
+    #         component_id={"type": "input_parameters", "index": ALL},
+    #         component_property="value",
+    #     )
+    # ],
 )
-def button_submit_clicked(click, epidemiological_model, network_model, *parameters):
+def button_submit_clicked(click)#, epidemiological_model, network_model, *parameters):
     if click is None:
         raise PreventUpdate
     print("i am button_submit_clicked")
@@ -373,28 +362,21 @@ def button_submit_clicked(click, epidemiological_model, network_model, *paramete
     global inputed_parameters
     global s_time
     global graph_states
-    # print("two type : ", type(parameters))
-    # print("two : ", parameters[0])
-    # print("two len : ", len(parameters[0]))
-    # print('total_fields len: ', len(total_fields))
-    # print('total fields :', total_fields)
     print("----------")
-    inputed_parameters["epidemiological_model"] = epidemiological_model
-    inputed_parameters["network_model"] = network_model
+    inputed_parameters["epidemiological_model"] = epidemiological_model if epidemiological_model is not None else inputed_parameters["epidemiological_model"]
+    inputed_parameters["network_model"] = network_model if network_model is not None else inputed_parameters["network_model"]
     if len(parameters[0]) != 0 and parameters[0][0] != None:
         for i in range(0, len(parameters[0])):
-            inputed_parameters[total_fields[i]] = parameters[0][i]
-        # run_simulation.path_to_R = path_to_R
-        print("hello")
-        graph_states, dinamics_data = run_simulation.simulation(inputed_parameters)
-        s_time = 0
-        return update_dinamics(dinamics_data)
-    print("not hello")
-    graph_states, dinamics_data = run_simulation.simulation(inputed_parameters)
+            inputed_parameters[total_fields[i]] = parameters[0][i] if parameters[0][i] is not None else inputed_parameters[total_fields[i]]
+    s_time = 0
+    graph_states, dinamics_data = run_simulation.run(inputed_parameters)
+    
+    print("----------")
     print("type of returned state: ",type(graph_states[0]))
+    print("lenght", len(graph_states))
     # print('inputed_parameters : ', inputed_parameters)
     # return {'display': 'none'}
-    return update_dinamics(dinamics_data)
+    return update_dinamics(dinamics_data), False#, int(inputed_parameters['Maximum_simulation_time'])+1
 
 
 # @app.callback(
@@ -423,117 +405,180 @@ def update_dinamics(dinamics_data):
         labels={"time": "Time", "value": "Amount of people", "variable": "Curves:"},
     )
 
-
 @app.callback(
     Output("test_clock", "children"),
-    # Output("test_clock", "children"),
-    Output("image1", "src"),
-    Output("my-slider", "value"),
-    Output("graph_visualization", "figure"),
     Input("interval1", "n_intervals"),
 )
-def graph_updating(n_step):
-    if n_step is None:
-        raise PreventUpdate
-    print("i am graph_updating")
-    # print(app.get_asset_url())
-    global s_time
-    global inputed_parameters
-    if s_time >= 0 and s_time < inputed_parameters['Maximum_simulation_time'] + 1:
-        s_time += 1
-        return (
-            "Time : " + str(s_time - 1),
-            app.get_asset_url("plots\\" + str(s_time - 1) + ".png"),
-            s_time - 1,
-            get_graph(s_time-1)
-        )
-    return "Not started", app.get_asset_url("0.png"), 0, px.scatter()#, None
+def test(n_intervals):
+    print(n_intervals)
+    return n_intervals
+
+# @app.callback(
+#     Output("test_clock", "children"),
+#     # Output("test_clock", "children"),
+#     #Output("image1", "src"),
+#     Output("my-slider", "value"),
+#     Output("graph_visualization", "figure"),
+#     Input("interval1", "n_intervals"),
+# )
+# def graph_updating(n_step):
+#     if n_step is None:
+#         raise PreventUpdate
+#     print("i am graph_updating")
+#     # print(app.get_asset_url())
+#     global s_time
+#     global inputed_parameters
+#     if s_time >= 0 and s_time < inputed_parameters['Maximum_simulation_time'] + 1:
+#         print("graph states: ", len(graph_states))
+#         s_time += 1
+#         return (
+#             "Time : " + str(s_time - 1),
+#             #app.get_asset_url("plots\\" + str(s_time - 1) + ".png"),
+#             s_time - 1,
+#             get_graph(s_time-1)
+#         )
+#     return "Not started", 0, px.scatter()#, None
 
 
-def get_graph(index):
-    print("i would like to build a graph")
-    print("index : ", index)
-    G = graph_states[index]
-    #igraph.plot(G)
-    #G=igraph.Graph.Tree(127,2)
-    labels= [i for i in range(G.vcount())] #list(G.vs['label'])
-    G.vs['name'] = ["name_" + str(i) for i in labels]
-    N=len(labels)
-    E=[e.tuple for e in G.es]# list of edges
-    layt=G.layout('kk') #kamada-kawai layout
-    type(layt)
-    colors = G.vs['color']
+# # # make 2 inputs https://dash.plotly.com/duplicate-callback-outputs
+# # @app.callback(
+# #     Output("test_clock", "children"),
+# #     Output("my-slider", "value"),
+# #     Output("graph_visualization", "figure"),
+# #     Input("interval1", "n_intervals"),
+# # )
+# # def interval_graph_updating(n_step):
+# #     return ("Time : " + str(n_step * inputed_parameters['Time_of_data_collection']),
+# #             str(n_step * inputed_parameters['Time_of_data_collection']),
+# #             graph_updating(n_step)
+# #     )
 
-    Xn=[layt[k][0] for k in range(N)]
-    Yn=[layt[k][1] for k in range(N)]
-    Xe=[]
-    Ye=[]
-    for e in E:
-        Xe+=[layt[e[0]][0],layt[e[1]][0], None]
-        Ye+=[layt[e[0]][1],layt[e[1]][1], None]
 
-    trace1=go.Scatter(x=Xe,
-                y=Ye,
-                mode='lines',
-                line= dict(color='rgb(210,210,210)', width=1),
-                hoverinfo='none'
-                )
-    trace2=go.Scatter(x=Xn,
-                y=Yn,
-                mode='markers',
-                name='ntw',
-                marker=dict(symbol='circle-dot',
-                                            size=10,
-                                            color=colors,
-                                            line=dict(color='rgb(50,50,50)', width=1)
-                                            ),
-                text=labels,
-                hoverinfo='none'
-                )
+# # @app.callback(
+# #     Output("test_clock", "children"),
+# #     Output("interval1", "n_intervals"),
+# #     Output("graph_visualization", "figure"),
+# #     Input("my-slider", "value"), 
+# # )
+# # def slider_graph_updating(value):
+# #     return("Time : " + str(value),
+# #         int(value / inputed_parameters['Time_of_data_collection']),
+# #         graph_updating(value / inputed_parameters['Time_of_data_collection'])
+# #     )
 
-    axis=dict(showline=False, # hide axis line, grid, ticklabels and  title
-            zeroline=False,
-            showgrid=False,
-            showticklabels=False,
-            title=''
-            )
 
-    width=1000
-    height=1000
-    layout=go.Layout(
-        font= dict(size=12),
-        showlegend=False,
-        autosize=False,
-        width=width,
-        height=height,
-        xaxis=go.layout.XAxis(axis),
-        yaxis=go.layout.YAxis(axis),
-        # margin=go.layout.Margin(
-        #     l=40,
-        #     r=40,
-        #     b=85,
-        #     t=100,
-        # ),
-        #align='center',
-        hovermode='closest',
-        annotations=[
-            dict(
-            showarrow=False,
-                xref='paper',
-                yref='paper',
-                x=0,
-                y=-0.1,
-                xanchor='left',
-                yanchor='bottom',
-                font=dict(
-                size=14
-                )
-            )
-        ]
-    )
+# # def graph_updating(time):
+# #     if time is None:
+# #         raise PreventUpdate
+# #     print("i am graph_updating")
+# #     global inputed_parameters
+# #     if time >= 0 and time < inputed_parameters['Maximum_simulation_time'] + 1:
+# #         return (
+# #             # "Time : " + str(time * inputed_parameters['Time_of_data_collection']),
+# #             # #app.get_asset_url("plots\\" + str(s_time - 1) + ".png"),
+# #             # str(time * inputed_parameters['Time_of_data_collection']),
+# #             get_graph(time)
+# #         )
+# #     return px.scatter()
 
-    data=[trace1, trace2]
-    fig=go.Figure(data=data, layout=layout)
-    #fig.show()
-    print("\\n\\\n\n\n\n\n\ni would like to build a graph\n\n\n\n\n\n\n")
-    return fig
+
+
+# def get_graph(index):
+#     print("getting graph ", index)
+#     print("index : ", index)
+#     G = graph_states[index]
+#     #igraph.plot(G)
+#     #G=igraph.Graph.Tree(127,2)
+#     labels= [i for i in range(G.vcount())] #list(G.vs['label'])
+#     G.vs['name'] = ["name_" + str(i) for i in labels]
+#     N=len(labels)
+#     E=[e.tuple for e in G.es]# list of edges # represintation (start node, end node)
+#     layt=G.layout('kk', dim=3) #kamada-kawai layout
+#     type(layt)
+#     v_colors = G.vs['color']
+#     v_sizes = G.vs['infections']
+#     e_colors = G.es['color']
+#     e_sizes = G.es['infections']
+
+
+#     Xn=[layt[k][0] for k in range(N)]
+#     Yn=[layt[k][1] for k in range(N)]
+#     Zn=[layt[k][2] for k in range(N)]
+
+#     Xe=[]
+#     Ye=[]
+#     Ze=[]
+
+#     for e in E:
+#         Xe+=[layt[e[0]][0], layt[e[1]][0]] #coordinates of edge e(start, end)
+#         Ye+=[layt[e[0]][1], layt[e[1]][1]] 
+#         Ze+=[layt[e[0]][2], layt[e[1]][2]] 
+
+#     trace1=[go.Scatter3d(
+#                 x=Xe[i:i+2],
+#                 y=Ye[i:i+2],
+#                 z=Ze[i:i+2],
+#                 mode='lines',
+#                 line= dict(color=e_colors[int(i/2)], width=1 + 3 * e_sizes[int(i/2)]),
+#                 hoverinfo='none'
+#     ) for i in range(0, len(e_colors)*2, 2)]
+
+#     trace2=go.Scatter3d(x=Xn,
+#                 y=Yn,
+#                 z=Zn,
+#                 mode='markers',
+#                 name='ntw',
+#                 marker=dict(symbol='circle',
+#                                             size=12,
+#                                             color=v_colors,
+#                                             line=dict(color='rgb(50,50,50)', width=1)
+#                                             ),
+#                 text=labels,
+#                 hoverinfo='none'
+#     )
+
+#     axis=dict(showline=False, # hide axis line, grid, ticklabels and  title
+#             zeroline=False,
+#             showgrid=False,
+#             showticklabels=False,
+#             title=''
+#             )
+
+#     width=1800
+#     height=900
+#     layout=go.Layout(
+#         font= dict(size=12),
+#         showlegend=False,
+#         autosize=False,
+#         width=width,
+#         height=height,
+#         xaxis=go.layout.XAxis(axis),
+#         yaxis=go.layout.YAxis(axis),
+#         # margin=go.layout.Margin(
+#         #     l=40,
+#         #     r=40,
+#         #     b=85,
+#         #     t=100,
+#         # ),
+#         #align='center',
+#         hovermode='closest',
+#         annotations=[
+#             dict(
+#             showarrow=False,
+#                 xref='paper',
+#                 yref='paper',
+#                 x=0,
+#                 y=-0.1,
+#                 xanchor='left',
+#                 yanchor='bottom',
+#                 font=dict(
+#                 size=14
+#                 )
+#             )
+#         ]
+#     )
+
+#     data=[*trace1, trace2]
+#     fig=go.Figure(data=data, layout=layout)
+#     #fig.show()
+#     return fig

@@ -10,20 +10,24 @@ import threading
 import datetime
 import pathlib
 from scripts import Simulation
+from scripts import Network
+from scripts import Population
+from scripts import Network_model
 
 # inputed_parameters = {
-#     "epidemiological_model" : "",
-#     "network_model" : "",
-#     "Size" : "",
-#     "Infection_rate" : "",
-#     "Maximum_simulation_time" : "",
-#     "Time_of_data_collection" : "",
-#     "start_infected" : "",
-#     'number_of_edges' : "",
-#     'reconection_coefitient' : "",
-#     'Treatment_Period' : "",
-#     'Critically_Treatment_Period' : "",
-#     'number_of_simulations' : "",
+#     "epidemiological_model": "SIR",
+#     "network_model": "BA",
+#     "Size": 100,
+#     "Infection_rate": 0.1,
+#     "Maximum_simulation_time": 100,
+#     "Time_of_data_collection": 1,
+#     "start_infected": 1,
+#     "number_of_edges": 2,
+#     "reconection_coefitient": 0,
+#     "Treatment_Period": 10,
+#     "Critically_Treatment_Period": 14,
+#     "number_of_simulations": 1,
+#     "Criticaly_infection_rate": "different",
 # }
 
 #def start_simulation(amount, size, start_infected, infection_rate, time_step, time_max, 
@@ -33,93 +37,47 @@ from scripts import Simulation
 PATH = str(pathlib.Path(__file__).parent.absolute()).replace('scripts', '')
 
 
-def simulation(inputed_parameters):
-	print("PATH", PATH)
+def run(inputed_parameters):
 	parameters = prepare_parameters(inputed_parameters)
-	#print(parameters)
-	#print("---------------------\n----------\n------------")
-	#print("content : ", os.listdir())
-	# start_simulation(
-	# 	amount = parameters['number_of_simulations'],
-	# 	size = parameters['Size'], 
-	# 	start_infected = parameters['start_infected'],
-	# 	infection_rate = parameters['Infection_rate'],
-	# 	time_step = parameters['Time_of_data_collection'],
-	# 	time_max = parameters['Maximum_simulation_time'], 
-	# 	virus_types = "1",
-	# 	network_type = parameters['network_model'],
-	# 	folder = get_folder_name(parameters),
-	# 	death_rate_type = parameters['Criticaly_infection_rate'],
-	# 	amount_of_edges = parameters['number_of_edges'],
-	# 	prob_reconnection = parameters['reconection_coefitient'],
-	# 	number_of_threads = 2
-	# )
-	i = 0.
 	print(parameters)
-	return Simulation.simulation(
-		graph_size = int(parameters['Size']),
-		network_type = parameters['network_model'], 
-		amount_of_contacts = int(parameters['number_of_edges']), 
-		infection_rate = round(float(parameters['Infection_rate']), 6),
-		number_of_infications = int(parameters['start_infected']), 
-		max_time = int(parameters['Maximum_simulation_time']), 
-		time_step = round(float(parameters['Time_of_data_collection']),2), 
-		i = int(i), 
-		folder = PATH + "/assets/simulations/"
-	)
 
+	graph_size = int(parameters['Size'])
+	network_type = parameters['network_model']
+	amount_of_contacts = int(parameters['number_of_edges'])
+	reconnection_rate = 0
+	
+	graph = create_graph(graph_size, amount_of_contacts, network_type, reconnection_rate)
+	last = None
+
+	for i in range(parameters['number_of_simulations']):
+		last = Simulation.simulation(
+			graph = graph,
+			graph_size = int(parameters['Size']),
+			network_type = parameters['network_model'], 
+			amount_of_contacts = int(parameters['number_of_edges']), 
+			infection_rate = round(float(parameters['Infection_rate']), 6),
+			number_of_infections = int(parameters['start_infected']), 
+			death_rate_type = parameters['Criticaly_infection_rate'],
+			max_time = int(parameters['Maximum_simulation_time']), 
+			time_step = round(float(parameters['Time_of_data_collection']),2), 
+			i = int(i), 
+			folder = PATH + "/assets/simulations/"
+		)
+	return last
+# def simulation(graph, graph_size, network_type, 
+# amount_of_contacts, infection_rate, number_of_infections, 
+# death_rate_type,  max_time, time_step, 
+# i, folder, reconnection_rate = -1, quorantine_measures = ""):
+
+def create_graph(graph_size, amount_of_contacts, network_type, reconnection_rate = 0):
+	#print("Graph creation")
+	graph = Network_model.create_network(graph_size, amount_of_contacts, network_type, reconnection_rate)
+	graph.vs['infections'] = np.array([0 for i in range(graph.vcount())])
+	graph.es['infections'] = np.array([0 for i in range(graph.ecount())])
+	return graph
 
 
 def prepare_parameters(inputed_parameters):
 	if inputed_parameters['network_model'] == "Barabasi-Albert":
 		inputed_parameters['network_model'] = 'BA'
 	return inputed_parameters
-
-
-# def get_folder_name(parameters):
-# 	#folder_name = "test"
-# 	folder_name = "output_data/simulations/size {}, start_infected {}, infection_rate {}, time_step {}, time_max {}, network_type {}, amount_of_edges {}, virus_types {} death_rate_type {}, prob_reconnection {}".format(
-# 							parameters['Size'], parameters['start_infected'], 
-# 							parameters['Infection_rate'], parameters['Time_of_data_collection'],
-# 							parameters['Maximum_simulation_time'], parameters['network_model'],
-# 							parameters['number_of_edges'],
-# 							'1', #virus_types
-# 							parameters['Criticaly_infection_rate'],
-# 							parameters['reconection_coefitient']
-# 		)
-# 	return folder_name
-
-# class myThread (threading.Thread):
-# 	def __init__(self, i, cmd):
-# 		threading.Thread.__init__(self)
-# 		self.threadID = i
-# 		self.threadCMD = cmd
-
-
-# 	def run(self):
-# 		print("i = ", self.threadID)
-# 		run_simulation(self.threadCMD)		
-
-
-# def run_simulation(cmd):
-# 	print("--------------\n\ncmd : ", cmd, "\n\n---------------------")
-# 	subprocess.call(cmd, universal_newlines = True)
-
-
-# def start_simulation(amount, size, start_infected, infection_rate, time_step, time_max, network_type, folder, virus_types, death_rate_type, amount_of_edges, prob_reconnection, number_of_threads = 2):
-# 	print(folder)
-# 	command = path_to_R
-# 	path2script = "scripts\\Simulation.R"
-# 	for i in range(0,amount, number_of_threads):
-# 		threads = list()
-# 		for j in range(0, number_of_threads):
-# 			if (i + j >= amount):
-# 				break
-# 			args = [str(size), str(start_infected), str(time_max), str(infection_rate), str(time_step), str(i + j), folder, str(network_type), virus_types, death_rate_type, str(amount_of_edges), str(prob_reconnection)]
-# 			cmd = [command, path2script] + args
-# 			thread = myThread(i + j, cmd)
-# 			threads.append(thread)
-# 			thread.start()
-
-# 		for thread in threads:
-# 			thread.join()

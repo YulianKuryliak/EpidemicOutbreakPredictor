@@ -9,11 +9,11 @@ from app import app
 from app import server
 
 
+from scripts import test
+
+
 # Connect to your app pages
 from tabs import simulation_tab#, analysis_tab, home_tab
-path_to_R = "C:\\Program Files\\R\\R-4.0.3\\bin\\Rscript.exe"
-simulation_tab.path_to_R = path_to_R
-
 
 
 app.layout = html.Div([
@@ -45,3 +45,7 @@ def display_page(pathname):
 
 if __name__ == '__main__':
     app.run_server(debug=True)
+
+
+# kill process
+# kill -9 $(lsof -t -i:8050)
