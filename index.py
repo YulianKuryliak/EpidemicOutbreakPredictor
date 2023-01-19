@@ -9,9 +9,6 @@ from app import app
 from app import server
 
 
-from scripts import file1
-
-
 # Connect to your app pages
 from tabs import simulation_tab#, analysis_tab, home_tab
 

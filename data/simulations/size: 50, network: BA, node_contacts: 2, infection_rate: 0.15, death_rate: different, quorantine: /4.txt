@@ -1,0 +1,11 @@
+time,amount_of_infected,amount_of_susceptible,amount_of_contagious,amount_of_critically_infected,amount_of_dead
+1.0,2,48,2,0,0
+2.0,6,44,6,3,0
+3.0,8,42,8,4,0
+4.0,14,36,14,5,0
+5.0,18,32,18,6,0
+6.0,24,26,24,7,0
+7.0,30,20,30,8,0
+8.0,36,14,36,11,0
+9.0,41,9,41,12,0
+10.0,44,5,44,12,0

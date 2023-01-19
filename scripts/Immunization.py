@@ -1,7 +1,7 @@
-from scripts import Network_model
-from scripts import Network
+import Network_model
+import Network
 import numpy as np
-from scripts import Population
+import Population
 import igraph as ig
 from numpy.linalg import eig
 import math

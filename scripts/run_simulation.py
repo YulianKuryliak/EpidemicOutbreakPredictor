@@ -30,6 +30,8 @@ from scripts import Network_model
 #     "Criticaly_infection_rate": "different",
 # }
 
+
+
 PATH = str(pathlib.Path(__file__).parent.absolute()).replace('scripts', '')
 
 
@@ -57,13 +59,27 @@ def run(inputed_parameters):
 			max_time = int(parameters['Maximum_simulation_time']), 
 			time_step = round(float(parameters['Time_of_data_collection']),2), 
 			i = int(i), 
-			folder = PATH + "/data/simulations/"
+			folder = PATH + "/data/simulations/",
+			reconnection_rate = round(float(parameters['Reconnection_rate']), 6), 
+			quorantine_measures = parameters['Quorantine_measures'], 
+			directed = parameters['Directed'], #check type
+			number_of_nodes_for_immunization = int(parameters['Number_of_nodes_for_immunization'])
 		)
 	return last
 # def simulation(graph, graph_size, network_type, 
-# amount_of_contacts, infection_rate, number_of_infections, 
-# death_rate_type,  max_time, time_step, 
-# i, folder, reconnection_rate = -1, quorantine_measures = ""):
+# amount_of_contacts, infection_rate, 
+# number_of_infections, death_rate_type, 
+# max_time, time_step, i, folder_path, 
+# reconnection_rate, quorantine_measure, 
+# directed, number_of_nodes_for_immunization)
+
+
+def create_network(graph_size, amount_of_contacts, network_type, reconnection_rate = 0, quorantine_measures = "", directed = False, number_of_nodes_for_immunization = 0):
+	graph = Network_model.create_network(graph_size, amount_of_contacts, network_type, reconnection_rate)
+	network = Network.Network(graph, Population.get_population(), directed = directed)
+	network = network.better_removing(mode = quorantine_measures, number_of_nodes=number_of_nodes_for_immunization)
+	return network
+
 
 def create_graph(graph_size, amount_of_contacts, network_type, reconnection_rate = 0):
 	#print("Graph creation")

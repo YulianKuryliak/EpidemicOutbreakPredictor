@@ -62,16 +62,20 @@ inputed_parameters = {
     "epidemiological_model": "SIR",
     "network_model": "BA",
     "Size": 50,
-    "Infection_rate": 0.5,
+    "Infection_rate": 0.2,
     "Maximum_simulation_time": 20,
     "Time_of_data_collection": 1,
     "start_infected": 1,
     "number_of_edges": 2,
     "reconection_coefitient": 0,
-    "Treatment_Period": 10,
+    "Treatment_Period": 14,
     "Critically_Treatment_Period": 14,
     "number_of_simulations": 5,
     "Criticaly_infection_rate": "different",
+    "Reconnection_rate": -1,
+	"Quorantine_measures": "no",
+	"Directed": False,
+	"Number_of_nodes_for_immunization": 3
 }
 
 s_time = -1
@@ -548,7 +552,8 @@ def get_graph(index):
             zeroline=False,
             showgrid=False,
             showticklabels=False,
-            title=''
+            #showbackground=False,
+            title='i want to realize what is that'
             )
 
     width=1800
