@@ -45,6 +45,8 @@ chosen_network_model = network_models[0]
 
 graph_states = []
 dinamics_data = []
+infections_by_node = []
+edges_infections = []
 
 # parameters for simmulation
 epidemiological_parameters = []
@@ -60,22 +62,22 @@ other_parameters = [
 total_fields = []
 inputed_parameters = {
     "epidemiological_model": "SIR",
-    "network_model": "BA",
-    "Size": 50,
-    "Infection_rate": 0.2,
-    "Maximum_simulation_time": 20,
+    "network_model": "ER",
+    "Size": 100,
+    "Infection_rate": 0.25,
+    "Maximum_simulation_time": 17,
     "Time_of_data_collection": 1,
     "start_infected": 1,
-    "number_of_edges": 2,
+    "number_of_edges": 200,
     "reconection_coefitient": 0,
     "Treatment_Period": 14,
     "Critically_Treatment_Period": 14,
-    "number_of_simulations": 5,
+    "number_of_simulations": 20,
     "Criticaly_infection_rate": "different",
     "Reconnection_rate": -1,
 	"Quorantine_measures": "no",
 	"Directed": False,
-	"Number_of_nodes_for_immunization": 3
+	"Number_of_nodes_for_immunization": 5
 }
 
 s_time = -1
@@ -370,6 +372,8 @@ def button_submit_clicked(click, epidemiological_model, network_model, *paramete
     global inputed_parameters
     global s_time
     global graph_states
+    global infections_by_node
+    global edges_infections
     print("----------")
     inputed_parameters["epidemiological_model"] = epidemiological_model if epidemiological_model is not None else inputed_parameters["epidemiological_model"]
     inputed_parameters["network_model"] = network_model if network_model is not None else inputed_parameters["network_model"]
@@ -378,7 +382,7 @@ def button_submit_clicked(click, epidemiological_model, network_model, *paramete
             inputed_parameters[total_fields[i]] = parameters[0][i] if parameters[0][i] is not None else inputed_parameters[total_fields[i]]
     s_time = 0
     #run_simulation.run(inputed_parameters)
-    graph_states, dinamics_data = run_simulation.run(inputed_parameters)
+    graph_states, dinamics_data, infections_by_node, edges_infections = run_simulation.run(inputed_parameters)
     
     # print("----------")
     # print("type of returned state: ",type(graph_states[0]))0
@@ -503,12 +507,12 @@ def get_graph(index):
     G.vs['name'] = ["name_" + str(i) for i in labels]
     N=len(labels)
     E=[e.tuple for e in G.es]# list of edges # represintation (start node, end node)
-    layt=G.layout('kk', dim=3) #kamada-kawai layout
+    layt=G.layout('kk_3d', dim=3) #auto, kk, drl, fr?
     type(layt)
     v_colors = G.vs['color']
-    v_sizes = G.vs['infections']
+    v_sizes = 10 + (infections_by_node / np.max(infections_by_node)) * 50
     e_colors = G.es['color']
-    e_sizes = G.es['infections']
+    e_sizes = 1 + (edges_infections / np.max(edges_infections)) * 10
 
 
     Xn=[layt[k][0] for k in range(N)]
@@ -529,68 +533,60 @@ def get_graph(index):
                 y=Ye[i:i+2],
                 z=Ze[i:i+2],
                 mode='lines',
-                line= dict(color=e_colors[int(i/2)], width=1 + 3 * e_sizes[int(i/2)]),
+                line= dict(color=e_colors[int(i/2)], width=e_sizes[int(i/2)]),
                 text = "edge " + str(int(i/2)),
-                hoverinfo='none'
+                hoverinfo='text',
+                #opacity = 1,
+                showlegend = False
     ) for i in range(0, len(e_colors)*2, 2)]
 
-    trace2=go.Scatter3d(x=Xn,
+    trace2=go.Scatter3d(
+                x=Xn,
                 y=Yn,
                 z=Zn,
                 mode='markers',
                 name='ntw',
-                marker=dict(symbol='circle',
-                                            size=12,
+                showlegend=True,
+                opacity = 1,
+                marker=dict(symbol='circle', #try to change to sphere
+                                            opacity = 1,
+                                            size= v_sizes,
                                             color=v_colors,
                                             line=dict(color='rgb(50,50,50)', width=1)
                                             ),
                 text=labels,
-                #hoverinfo='none'
+                #hoverinfo='text'
     )
 
-    axis=dict(showline=False, # hide axis line, grid, ticklabels and  title
+    
+    axis=dict(
+            showbackground=False,
+            showline=False,
             zeroline=False,
             showgrid=False,
             showticklabels=False,
-            #showbackground=False,
-            title='i want to realize what is that'
-            )
+            title='',
+            visible=False
+        )
+
 
     width=1800
     height=900
     layout=go.Layout(
+        #template = 'simple_white',
         font= dict(size=12),
         showlegend=False,
         autosize=False,
         width=width,
         height=height,
-        xaxis=go.layout.XAxis(axis),
-        yaxis=go.layout.YAxis(axis),
-        # margin=go.layout.Margin(
-        #     l=40,
-        #     r=40,
-        #     b=85,
-        #     t=100,
-        # ),
-        #align='center',
-        hovermode='closest',
-        annotations=[
-            dict(
-            showarrow=False,
-                xref='paper',
-                yref='paper',
-                x=0,
-                y=-0.1,
-                xanchor='left',
-                yanchor='bottom',
-                font=dict(
-                size=14
-                )
-            )
-        ]
+        scene=dict(
+             xaxis=dict(axis),
+             yaxis=dict(axis),
+             zaxis=dict(axis),
+        ),
     )
 
-    data=[*trace1, trace2]
+    data=[*trace1]
     fig=go.Figure(data=data, layout=layout)
-    #fig.show()
+    fig.add_trace(trace2)
     return fig
